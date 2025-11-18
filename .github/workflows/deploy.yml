@@ -61,12 +61,11 @@ jobs:
           wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
           sudo dpkg -i cloudflared-linux-amd64.deb
 
-      - name: Add known hosts (including local tunnel listener)
+      - name: Add known hosts
         env:
           SSH_HOST: ${{ secrets.SSH_HOST }}
           SSH_PORT: ${{ secrets.SSH_PORT }}
           SSH_KNOWN_HOST: ${{ secrets.SSH_KNOWN_HOST }}
-          LISTENER_PORT: ${{ env.LISTENER_PORT }}
         run: |
           set -euo pipefail
           mkdir -p ~/.ssh
@@ -74,24 +73,11 @@ jobs:
           KNOWN_HOSTS_FILE="$HOME/.ssh/known_hosts"
           touch "$KNOWN_HOSTS_FILE"
 
-          TEMP_HOSTS="$(mktemp)"
           if [ -n "$SSH_KNOWN_HOST" ]; then
-            printf "%s\n" "$SSH_KNOWN_HOST" > "$TEMP_HOSTS"
+            printf "%s\n" "$SSH_KNOWN_HOST" >> "$KNOWN_HOSTS_FILE"
           else
-            ssh-keyscan -p "$SSH_PORT" "$SSH_HOST" > "$TEMP_HOSTS"
+            ssh-keyscan -p "$SSH_PORT" "$SSH_HOST" >> "$KNOWN_HOSTS_FILE"
           fi
-
-          cat "$TEMP_HOSTS" >> "$KNOWN_HOSTS_FILE"
-
-          awk -v port="$LISTENER_PORT" 'NF >= 2 {
-            printf "[127.0.0.1]:%s", port;
-            for (i = 2; i <= NF; i++) {
-              printf " %s", $i;
-            }
-            printf "\n";
-          }' "$TEMP_HOSTS" >> "$KNOWN_HOSTS_FILE"
-
-          rm -f "$TEMP_HOSTS"
 
       - name: Deploy via Cloudflare Tunnel SSH
         env:
@@ -118,6 +104,11 @@ jobs:
 
           # Give cloudflared a moment to create the listener
           sleep 3
+
+          KNOWN_HOSTS_FILE="$HOME/.ssh/known_hosts"
+          mkdir -p "$(dirname "$KNOWN_HOSTS_FILE")"
+          touch "$KNOWN_HOSTS_FILE"
+          ssh-keyscan -p "${LISTENER_PORT}" 127.0.0.1 >> "$KNOWN_HOSTS_FILE"
 
           ssh -tt -o StrictHostKeyChecking=yes -p "${LISTENER_PORT}" "$SSH_USER@127.0.0.1" << 'EOF'
             set -e
