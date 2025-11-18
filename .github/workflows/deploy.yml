@@ -88,7 +88,6 @@ jobs:
             --hostname "$SSH_HOST" \
             --service-token-id "$CF_ACCESS_SERVICE_TOKEN_ID" \
             --service-token-secret "$CF_ACCESS_SERVICE_TOKEN_SECRET" \
-            --url "ssh://localhost:$SSH_PORT" \
             -- \
             ssh -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" << 'EOF'
               set -e
