@@ -1,7 +1,7 @@
 streamlit==1.29.0
 streamlit_js_eval==0.1.7
 deep-translator==1.11.4
-googletrans==4.0.0
+googletrans==4.0.2
 gTTS==2.4.0
 PyMuPDF
 requests==2.31.0
