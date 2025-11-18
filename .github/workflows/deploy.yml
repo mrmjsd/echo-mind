@@ -46,6 +46,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: lint-and-test
     if: github.ref == 'refs/heads/main'
+    env:
+      LISTENER_PORT: 2222
 
     steps:
       - name: Checkout repository
@@ -59,19 +61,37 @@ jobs:
           wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
           sudo dpkg -i cloudflared-linux-amd64.deb
 
-      - name: Add known hosts
+      - name: Add known hosts (including local tunnel listener)
         env:
           SSH_HOST: ${{ secrets.SSH_HOST }}
           SSH_PORT: ${{ secrets.SSH_PORT }}
           SSH_KNOWN_HOST: ${{ secrets.SSH_KNOWN_HOST }}
+          LISTENER_PORT: ${{ env.LISTENER_PORT }}
         run: |
+          set -euo pipefail
           mkdir -p ~/.ssh
-          touch ~/.ssh/known_hosts
+          chmod 700 ~/.ssh
+          KNOWN_HOSTS_FILE="$HOME/.ssh/known_hosts"
+          touch "$KNOWN_HOSTS_FILE"
+
+          TEMP_HOSTS="$(mktemp)"
           if [ -n "$SSH_KNOWN_HOST" ]; then
-            echo "$SSH_KNOWN_HOST" >> ~/.ssh/known_hosts
+            printf "%s\n" "$SSH_KNOWN_HOST" > "$TEMP_HOSTS"
           else
-            ssh-keyscan -p "$SSH_PORT" "$SSH_HOST" >> ~/.ssh/known_hosts
+            ssh-keyscan -p "$SSH_PORT" "$SSH_HOST" > "$TEMP_HOSTS"
           fi
+
+          cat "$TEMP_HOSTS" >> "$KNOWN_HOSTS_FILE"
+
+          awk -v port="$LISTENER_PORT" 'NF >= 2 {
+            printf "[127.0.0.1]:%s", port;
+            for (i = 2; i <= NF; i++) {
+              printf " %s", $i;
+            }
+            printf "\n";
+          }' "$TEMP_HOSTS" >> "$KNOWN_HOSTS_FILE"
+
+          rm -f "$TEMP_HOSTS"
 
       - name: Deploy via Cloudflare Tunnel SSH
         env:
@@ -87,7 +107,6 @@ jobs:
         run: |
           set -euo pipefail
 
-          LISTENER_PORT=2222
           echo "Starting Cloudflare Access TCP listener on port ${LISTENER_PORT}..."
           cloudflared access tcp \
             --hostname "$CF_ACCESS_HOSTNAME" \
