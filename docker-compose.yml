@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  # Backend Service (FastAPI)
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: echomind-backend
+    ports:
+      - "3030:3030"
+    volumes:
+      - ./data:/app/data
+      - ./models:/app/models
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
+    networks:
+      - echomind-network
+
+  # Frontend Service (Streamlit)
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: echomind-frontend
+    ports:
+      - "4000:8501"
+    depends_on:
+      - backend
+    environment:
+      - PYTHONUNBUFFERED=1
+      - BACKEND_HOST=backend
+      - BACKEND_PORT=3030
+    restart: unless-stopped
+    networks:
+      - echomind-network
+
+networks:
+  echomind-network:
+    driver: bridge
+
+volumes:
+  data:
+  models:

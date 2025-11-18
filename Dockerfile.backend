@@ -1,0 +1,33 @@
+# Backend Dockerfile for EchoMind FastAPI Service
+FROM python:3.10-slim
+
+# Set working directory
+WORKDIR /app
+ENV PYTHONPATH=/app/app
+
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    gcc g++ \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy backend requirements
+COPY requirements.backend.txt ./requirements.txt
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy backend application code
+COPY app/ /app/app/
+
+# Add app directory to PYTHONPATH
+ENV PYTHONPATH=/app/app
+
+# Create necessary directories
+RUN mkdir -p /app/data/docs /app/models
+
+# Expose port
+EXPOSE 3030
+
+# Run the application
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "3030"]

@@ -1,0 +1,14 @@
+models
+.vscode
+.venv
+__pycache__
+third_party
+app/models
+app/data/docs/Apparel  doc.docx
+ui/modules
+
+
+app/temp_audio/
+ui/modules
+.DS_Store
+ui/.env

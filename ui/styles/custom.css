@@ -1,0 +1,29 @@
+.main .block-container {
+    padding-top: 2rem;
+}
+.stButton button {
+    background-color: #4CAF50;
+    color: white;
+    padding: 10px 24px;
+    border-radius: 8px;
+    border: none;
+    font-size: 16px;
+}
+.stButton button:hover {
+    background-color: #45a049;
+}
+.message-container {
+    border-radius: 10px;
+    padding: 10px;
+    margin: 5px 0;
+}
+.user-message {
+    background-color: rgb(14, 17, 23);
+    text-align: right;
+    margin-left: 20%;
+}
+.assistant-message {
+    background-color: #c12525;
+    text-align: left;
+    margin-right: 20%;
+}
