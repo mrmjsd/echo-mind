@@ -51,11 +51,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up SSH key
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: |
-            ${{ secrets.SSH_PRIVATE_KEY }}
 
       - name: Install cloudflared
         run: |
@@ -78,6 +73,8 @@ jobs:
           APP_DIR: ${{ secrets.APP_DIR }}
           CF_ACCESS_SERVICE_TOKEN_ID: ${{ secrets.CF_ACCESS_SERVICE_TOKEN_ID }}
           CF_ACCESS_SERVICE_TOKEN_SECRET: ${{ secrets.CF_ACCESS_SERVICE_TOKEN_SECRET }}
+          ROOT_ENV_B64: ${{ secrets.ROOT_ENV_B64 }}
+          UI_ENV_B64: ${{ secrets.UI_ENV_B64 }}
         run: |
           cloudflared access ssh \
             --hostname "$SSH_HOST" \
@@ -90,6 +87,17 @@ jobs:
               echo "Connected through Cloudflare Tunnel"
 
               cd "$APP_DIR"
+
+              if [ -n "$ROOT_ENV_B64" ]; then
+                echo "Updating root .env"
+                echo "$ROOT_ENV_B64" | base64 -d > .env
+              fi
+
+              if [ -n "$UI_ENV_B64" ]; then
+                echo "Updating ui/.env"
+                mkdir -p ui
+                echo "$UI_ENV_B64" | base64 -d > ui/.env
+              fi
 
               echo "Pulling latest code..."
               git fetch --all

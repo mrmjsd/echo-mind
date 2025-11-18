@@ -12,3 +12,4 @@ app/temp_audio/
 ui/modules
 .DS_Store
 ui/.env
+.env
