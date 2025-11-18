@@ -84,37 +84,47 @@ jobs:
           ROOT_ENV_B64: ${{ secrets.ROOT_ENV_B64 }}
           UI_ENV_B64: ${{ secrets.UI_ENV_B64 }}
         run: |
-          cloudflared access ssh \
+          set -euo pipefail
+
+          LISTENER_PORT=2222
+          echo "Starting Cloudflare Access TCP listener on port ${LISTENER_PORT}..."
+          cloudflared access tcp \
             --hostname "$SSH_HOST" \
             --service-token-id "$CF_ACCESS_SERVICE_TOKEN_ID" \
             --service-token-secret "$CF_ACCESS_SERVICE_TOKEN_SECRET" \
-            -- \
-            ssh -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" << 'EOF'
-              set -e
-              echo "Connected through Cloudflare Tunnel"
+            --listener "127.0.0.1:${LISTENER_PORT}" &
+          TUNNEL_PID=$!
+          trap 'kill $TUNNEL_PID' EXIT
 
-              cd "$APP_DIR"
+          # Give cloudflared a moment to create the listener
+          sleep 3
 
-              if [ -n "$ROOT_ENV_B64" ]; then
-                echo "Updating root .env"
-                echo "$ROOT_ENV_B64" | base64 -d > .env
-              fi
+          ssh -o StrictHostKeyChecking=yes -p "${LISTENER_PORT}" "$SSH_USER@127.0.0.1" << 'EOF'
+            set -e
+            echo "Connected through Cloudflare Tunnel"
 
-              if [ -n "$UI_ENV_B64" ]; then
-                echo "Updating ui/.env"
-                mkdir -p ui
-                echo "$UI_ENV_B64" | base64 -d > ui/.env
-              fi
+            cd "$APP_DIR"
 
-              echo "Pulling latest code..."
-              git fetch --all
-              git reset --hard origin/main
+            if [ -n "$ROOT_ENV_B64" ]; then
+              echo "Updating root .env"
+              echo "$ROOT_ENV_B64" | base64 -d > .env
+            fi
 
-              echo "Restarting Docker services..."
-              docker-compose down
-              docker-compose pull || true
-              docker-compose build --pull
-              docker-compose up -d
+            if [ -n "$UI_ENV_B64" ]; then
+              echo "Updating ui/.env"
+              mkdir -p ui
+              echo "$UI_ENV_B64" | base64 -d > ui/.env
+            fi
 
-              echo "Deployment completed successfully!"
-            EOF
+            echo "Pulling latest code..."
+            git fetch --all
+            git reset --hard origin/main
+
+            echo "Restarting Docker services..."
+            docker-compose down
+            docker-compose pull || true
+            docker-compose build --pull
+            docker-compose up -d
+
+            echo "Deployment completed successfully!"
+          EOF
