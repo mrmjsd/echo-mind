@@ -75,6 +75,7 @@ jobs:
 
       - name: Deploy via Cloudflare Tunnel SSH
         env:
+          CF_ACCESS_HOSTNAME: ${{ secrets.CF_ACCESS_HOSTNAME }}
           SSH_HOST: ${{ secrets.SSH_HOST }}
           SSH_USER: ${{ secrets.SSH_USER }}
           SSH_PORT: ${{ secrets.SSH_PORT }}
@@ -89,7 +90,7 @@ jobs:
           LISTENER_PORT=2222
           echo "Starting Cloudflare Access TCP listener on port ${LISTENER_PORT}..."
           cloudflared access tcp \
-            --hostname "$SSH_HOST" \
+            --hostname "$CF_ACCESS_HOSTNAME" \
             --service-token-id "$CF_ACCESS_SERVICE_TOKEN_ID" \
             --service-token-secret "$CF_ACCESS_SERVICE_TOKEN_SECRET" \
             --listener "127.0.0.1:${LISTENER_PORT}" &
@@ -99,7 +100,7 @@ jobs:
           # Give cloudflared a moment to create the listener
           sleep 3
 
-          ssh -o StrictHostKeyChecking=yes -p "${LISTENER_PORT}" "$SSH_USER@127.0.0.1" << 'EOF'
+          ssh -tt -o StrictHostKeyChecking=yes -p "${LISTENER_PORT}" "$SSH_USER@127.0.0.1" << 'EOF'
             set -e
             echo "Connected through Cloudflare Tunnel"
 
