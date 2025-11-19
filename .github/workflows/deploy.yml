@@ -163,4 +163,5 @@ jobs:
             APP_DIR="$APP_DIR" \
             ROOT_ENV_B64="$ROOT_ENV_B64" \
             UI_ENV_B64="$UI_ENV_B64" \
+            REPO_URL="$REPO_URL" \
             bash -s <<< "$DEPLOY_SCRIPT"
