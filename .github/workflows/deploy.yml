@@ -175,9 +175,22 @@ jobs:
             '    docker rm -f "$name" || true' \
             '  fi' \
             'done' \
-            'if lsof -Pi :3030 -sTCP:LISTEN -t >/dev/null 2>&1; then' \
-            '  echo "Port 3030 is busy; terminating owning process."' \
-            '  lsof -Pi :3030 -sTCP:LISTEN -t | xargs -r kill' \
+            'BUSY_PIDS=$(lsof -Pi :3030 -sTCP:LISTEN -t || true)' \
+            'if [ -n "$BUSY_PIDS" ]; then' \
+            '  echo "Port 3030 is busy (PIDs: $BUSY_PIDS); attempting to terminate."' \
+            '  echo "$BUSY_PIDS" | xargs -r kill || true' \
+            '  sleep 1' \
+            '  if lsof -Pi :3030 -sTCP:LISTEN -t >/dev/null 2>&1; then' \
+            '    if command -v sudo >/dev/null 2>&1; then' \
+            '      echo "Port 3030 still busy; trying sudo kill -9."' \
+            '      echo "$BUSY_PIDS" | xargs -r sudo -n kill -9 || true' \
+            '    fi' \
+            '    sleep 1' \
+            '  fi' \
+            '  if lsof -Pi :3030 -sTCP:LISTEN -t >/dev/null 2>&1; then' \
+            '    echo "Port 3030 is still occupied after kill attempts." >&2' \
+            '    exit 1' \
+            '  fi' \
             'fi' \
             '"${COMPOSE_CMD[@]}" pull || true' \
             '"${COMPOSE_CMD[@]}" build --pull' \
