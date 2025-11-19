@@ -159,18 +159,19 @@ jobs:
             'git fetch --all' \
             'git reset --hard origin/main' \
             'echo "Restarting Docker services..."' \
+            'COMPOSE_CMD=()' \
             'if command -v docker-compose >/dev/null 2>&1; then' \
-            '  COMPOSE_CMD="docker-compose"' \
-            'elif docker compose version >/dev/null 2>&1; then' \
-            '  COMPOSE_CMD="docker compose"' \
+            '  COMPOSE_CMD=("docker-compose")' \
+            'elif command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then' \
+            '  COMPOSE_CMD=("docker" "compose")' \
             'else' \
             '  echo "Neither docker-compose nor docker compose is available." >&2' \
             '  exit 1' \
             'fi' \
-            '"${COMPOSE_CMD}" down' \
-            '"${COMPOSE_CMD}" pull || true' \
-            '"${COMPOSE_CMD}" build --pull' \
-            '"${COMPOSE_CMD}" up -d' \
+            '"${COMPOSE_CMD[@]}" down' \
+            '"${COMPOSE_CMD[@]}" pull || true' \
+            '"${COMPOSE_CMD[@]}" build --pull' \
+            '"${COMPOSE_CMD[@]}" up -d' \
             'echo "Deployment completed successfully!"')
 
           ssh -tt -o StrictHostKeyChecking=yes -p "${LISTENER_PORT}" "$SSH_USER@127.0.0.1" \
