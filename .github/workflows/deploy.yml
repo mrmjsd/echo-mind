@@ -181,11 +181,22 @@ jobs:
             '  echo "$BUSY_PIDS" | xargs -r kill || true' \
             '  sleep 1' \
             '  if lsof -Pi :3030 -sTCP:LISTEN -t >/dev/null 2>&1; then' \
+            '    if command -v fuser >/dev/null 2>&1; then' \
+            '      echo "Port 3030 still busy; trying fuser -k 3030/tcp."' \
+            '      fuser -k 3030/tcp || true' \
+            '      sleep 1' \
+            '    fi' \
+            '  fi' \
+            '  if lsof -Pi :3030 -sTCP:LISTEN -t >/dev/null 2>&1; then' \
             '    if command -v sudo >/dev/null 2>&1; then' \
             '      echo "Port 3030 still busy; trying sudo kill -9."' \
             '      echo "$BUSY_PIDS" | xargs -r sudo -n kill -9 || true' \
+            '      sleep 1' \
+            '      if command -v fuser >/dev/null 2>&1; then' \
+            '        sudo -n fuser -k 3030/tcp || true' \
+            '        sleep 1' \
+            '      fi' \
             '    fi' \
-            '    sleep 1' \
             '  fi' \
             '  if lsof -Pi :3030 -sTCP:LISTEN -t >/dev/null 2>&1; then' \
             '    echo "Port 3030 is still occupied after kill attempts." >&2' \
