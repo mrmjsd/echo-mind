@@ -10,16 +10,10 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements file
-COPY requirements.txt .
+COPY requirements.frontend.txt ./requirements.txt
 
 # Install Python dependencies for frontend
-RUN pip install --no-cache-dir \
-    streamlit==1.29.0 \
-    streamlit_js_eval==0.1.7 \
-    deep-translator==1.11.4 \
-    googletrans==4.0.0rc1 \
-    gTTS==2.4.0 \
-    requests==2.31.0
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy UI code
 COPY ui/ /app/ui/
