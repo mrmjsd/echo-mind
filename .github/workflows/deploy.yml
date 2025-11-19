@@ -169,6 +169,12 @@ jobs:
             '  exit 1' \
             'fi' \
             '"${COMPOSE_CMD[@]}" down' \
+            'for name in echomind-backend echomind-frontend; do' \
+            '  if docker ps -a --format "{{.Names}}" | grep -Fxq "$name"; then' \
+            '    echo "Removing stale container: $name"' \
+            '    docker rm -f "$name" || true' \
+            '  fi' \
+            'done' \
             '"${COMPOSE_CMD[@]}" pull || true' \
             '"${COMPOSE_CMD[@]}" build --pull' \
             '"${COMPOSE_CMD[@]}" up -d' \
