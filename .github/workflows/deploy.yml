@@ -136,10 +136,16 @@ jobs:
             '    echo "REPO_URL is not set; cannot bootstrap repository." >&2' \
             '    exit 1' \
             '  fi' \
-            '  echo "Repository missing; cloning ${REPO_URL}..."' \
-            '  rm -rf ./*' \
-            '  git clone "${REPO_URL}" .' \
+            '  echo "Repository missing; initializing git repo and configuring origin..."' \
+            '  git init' \
+            '  git remote add origin "${REPO_URL}"' \
+            'else' \
+            '  git -C . rev-parse --is-inside-work-tree >/dev/null || {' \
+            '    echo "Directory exists but is not a git work tree; aborting." >&2' \
+            '    exit 1' \
+            '  }' \
             'fi' \
+            'git remote set-url origin "${REPO_URL}"' \
             'if [ -n "${ROOT_ENV_B64}" ]; then' \
             '  echo "Updating root .env"' \
             '  echo "${ROOT_ENV_B64}" | base64 -d > .env' \
