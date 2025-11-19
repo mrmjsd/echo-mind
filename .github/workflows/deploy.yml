@@ -106,6 +106,7 @@ jobs:
           CF_ACCESS_SERVICE_TOKEN_SECRET: ${{ secrets.CF_ACCESS_SERVICE_TOKEN_SECRET }}
           ROOT_ENV_B64: ${{ secrets.ROOT_ENV_B64 }}
           UI_ENV_B64: ${{ secrets.UI_ENV_B64 }}
+          REPO_URL: https://github.com/${{ github.repository }}.git
         run: |
           set -euo pipefail
 
@@ -130,6 +131,15 @@ jobs:
             'set -e' \
             'echo "Connected through Cloudflare Tunnel"' \
             'cd "${APP_DIR}"' \
+            'if [ ! -d .git ]; then' \
+            '  if [ -z "${REPO_URL}" ]; then' \
+            '    echo "REPO_URL is not set; cannot bootstrap repository." >&2' \
+            '    exit 1' \
+            '  fi' \
+            '  echo "Repository missing; cloning ${REPO_URL}..."' \
+            '  rm -rf ./*' \
+            '  git clone "${REPO_URL}" .' \
+            'fi' \
             'if [ -n "${ROOT_ENV_B64}" ]; then' \
             '  echo "Updating root .env"' \
             '  echo "${ROOT_ENV_B64}" | base64 -d > .env' \
