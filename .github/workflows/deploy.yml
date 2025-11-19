@@ -175,6 +175,10 @@ jobs:
             '    docker rm -f "$name" || true' \
             '  fi' \
             'done' \
+            'if lsof -Pi :3030 -sTCP:LISTEN -t >/dev/null 2>&1; then' \
+            '  echo "Port 3030 is busy; terminating owning process."' \
+            '  lsof -Pi :3030 -sTCP:LISTEN -t | xargs -r kill' \
+            'fi' \
             '"${COMPOSE_CMD[@]}" pull || true' \
             '"${COMPOSE_CMD[@]}" build --pull' \
             '"${COMPOSE_CMD[@]}" up -d' \
