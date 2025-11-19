@@ -126,32 +126,31 @@ jobs:
           touch "$KNOWN_HOSTS_FILE"
           ssh-keyscan -p "${LISTENER_PORT}" 127.0.0.1 >> "$KNOWN_HOSTS_FILE"
 
-          ssh -tt -o StrictHostKeyChecking=yes -p "${LISTENER_PORT}" "$SSH_USER@127.0.0.1" << 'EOF'
-            set -e
-            echo "Connected through Cloudflare Tunnel"
+          DEPLOY_SCRIPT=$(printf '%s\n' \
+            'set -e' \
+            'echo "Connected through Cloudflare Tunnel"' \
+            'cd "${APP_DIR}"' \
+            'if [ -n "${ROOT_ENV_B64}" ]; then' \
+            '  echo "Updating root .env"' \
+            '  echo "${ROOT_ENV_B64}" | base64 -d > .env' \
+            'fi' \
+            'if [ -n "${UI_ENV_B64}" ]; then' \
+            '  echo "Updating ui/.env"' \
+            '  mkdir -p ui' \
+            '  echo "${UI_ENV_B64}" | base64 -d > ui/.env' \
+            'fi' \
+            'echo "Pulling latest code..."' \
+            'git fetch --all' \
+            'git reset --hard origin/main' \
+            'echo "Restarting Docker services..."' \
+            'docker-compose down' \
+            'docker-compose pull || true' \
+            'docker-compose build --pull' \
+            'docker-compose up -d' \
+            'echo "Deployment completed successfully!"')
 
-            cd "$APP_DIR"
-
-            if [ -n "$ROOT_ENV_B64" ]; then
-              echo "Updating root .env"
-              echo "$ROOT_ENV_B64" | base64 -d > .env
-            fi
-
-            if [ -n "$UI_ENV_B64" ]; then
-              echo "Updating ui/.env"
-              mkdir -p ui
-              echo "$UI_ENV_B64" | base64 -d > ui/.env
-            fi
-
-            echo "Pulling latest code..."
-            git fetch --all
-            git reset --hard origin/main
-
-            echo "Restarting Docker services..."
-            docker-compose down
-            docker-compose pull || true
-            docker-compose build --pull
-            docker-compose up -d
-
-            echo "Deployment completed successfully!"
-          EOF
+          ssh -tt -o StrictHostKeyChecking=yes -p "${LISTENER_PORT}" "$SSH_USER@127.0.0.1" \
+            APP_DIR="$APP_DIR" \
+            ROOT_ENV_B64="$ROOT_ENV_B64" \
+            UI_ENV_B64="$UI_ENV_B64" \
+            bash -s <<< "$DEPLOY_SCRIPT"
