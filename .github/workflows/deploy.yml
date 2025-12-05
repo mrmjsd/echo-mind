@@ -169,13 +169,17 @@ jobs:
             '  exit 1' \
             'fi' \
             '"${COMPOSE_CMD[@]}" down' \
+            'echo "Stopping all running containers..."' \
+            'docker stop $(docker ps -q) 2>/dev/null || true' \
+            'sleep 2' \
             'for name in echomind-backend echomind-frontend; do' \
             '  if docker ps -a --format "{{.Names}}" | grep -Fxq "$name"; then' \
             '    echo "Removing stale container: $name"' \
             '    docker rm -f "$name" || true' \
             '  fi' \
             'done' \
-            'for PORT in 3030 4000; do' \
+            'echo "Cleaning up ports..."' \
+            'for PORT in 3031 4000; do' \
             '  BUSY_PIDS=$(lsof -Pi :$PORT -sTCP:LISTEN -t || true)' \
             '  if [ -n "$BUSY_PIDS" ]; then' \
             '    echo "Port $PORT is busy (PIDs: $BUSY_PIDS); attempting to terminate."' \
@@ -205,6 +209,8 @@ jobs:
             '    fi' \
             '  fi' \
             'done' \
+            'echo "Waiting for ports to be fully released..."' \
+            'sleep 3' \
             '"${COMPOSE_CMD[@]}" pull || true' \
             '"${COMPOSE_CMD[@]}" build --pull' \
             '"${COMPOSE_CMD[@]}" up -d' \
