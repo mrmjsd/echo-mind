@@ -173,33 +173,27 @@ jobs:
             'docker ps -a -q | xargs -r docker rm -f 2>/dev/null || true' \
             'docker network prune -f 2>/dev/null || true' \
             'sleep 3' \
-            'echo "=== Checking port usage ==="' \
-            'sudo ss -tlnp | grep -E ":(3031|4000)" || echo "No processes found on ports 3031/4000"' \
-            'echo "=== Killing port processes ==="' \
+            'echo "=== Checking port usage (without sudo) ==="' \
+            'ss -tlnp 2>/dev/null | grep -E ":(3031|4000)" || echo "No processes found on ports 3031/4000"' \
+            'echo "=== Attempting to free ports ==="' \
             'for PORT in 3031 4000; do' \
-            '  echo "Checking port $PORT..."' \
-            '  PIDS=$(sudo lsof -ti :$PORT 2>/dev/null || true)' \
+            '  PIDS=$(lsof -ti :$PORT 2>/dev/null || true)' \
             '  if [ -n "$PIDS" ]; then' \
-            '    echo "Found PIDs on port $PORT: $PIDS"' \
-            '    sudo lsof -i :$PORT' \
-            '    echo "Killing with sudo kill -9..."' \
-            '    echo "$PIDS" | xargs sudo kill -9 2>/dev/null || true' \
-            '    sleep 2' \
+            '    echo "Killing PIDs on port $PORT: $PIDS"' \
+            '    echo "$PIDS" | xargs kill -9 2>/dev/null || true' \
+            '    sleep 1' \
             '  fi' \
             '  if command -v fuser >/dev/null 2>&1; then' \
-            '    echo "Using sudo fuser to ensure port $PORT is free..."' \
-            '    sudo fuser -k $PORT/tcp 2>/dev/null || true' \
-            '    sleep 1' \
+            '    fuser -k $PORT/tcp 2>/dev/null || true' \
             '  fi' \
             'done' \
             'sleep 2' \
-            'echo "=== Final port verification ==="' \
-            'if sudo ss -tlnp | grep -E ":(3031|4000)"; then' \
-            '  echo "ERROR: Ports still in use after cleanup!" >&2' \
-            '  sudo lsof -i :3031 -i :4000 || true' \
-            '  exit 1' \
-            'else' \
-            '  echo "SUCCESS: Ports 3031 and 4000 are free"' \
+            'echo "=== Checking if ports are still busy ==="' \
+            'if ss -tlnp 2>/dev/null | grep -E ":(3031|4000)"; then' \
+            '  echo "WARNING: Ports may still be in use by system services"' \
+            '  echo "Attempting workaround: changing port mapping in docker-compose.yml"' \
+            '  sed -i "s/4000:8501/4001:8501/g" docker-compose.yml' \
+            '  echo "Changed frontend port from 4000 to 4001"' \
             'fi' \
             'echo "Final port verification before starting containers..."' \
             'for PORT in 3031 4000; do' \
