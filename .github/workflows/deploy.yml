@@ -175,34 +175,36 @@ jobs:
             '    docker rm -f "$name" || true' \
             '  fi' \
             'done' \
-            'BUSY_PIDS=$(lsof -Pi :3030 -sTCP:LISTEN -t || true)' \
-            'if [ -n "$BUSY_PIDS" ]; then' \
-            '  echo "Port 3030 is busy (PIDs: $BUSY_PIDS); attempting to terminate."' \
-            '  echo "$BUSY_PIDS" | xargs -r kill || true' \
-            '  sleep 1' \
-            '  if lsof -Pi :3030 -sTCP:LISTEN -t >/dev/null 2>&1; then' \
-            '    if command -v fuser >/dev/null 2>&1; then' \
-            '      echo "Port 3030 still busy; trying fuser -k 3030/tcp."' \
-            '      fuser -k 3030/tcp || true' \
-            '      sleep 1' \
-            '    fi' \
-            '  fi' \
-            '  if lsof -Pi :3030 -sTCP:LISTEN -t >/dev/null 2>&1; then' \
-            '    if command -v sudo >/dev/null 2>&1; then' \
-            '      echo "Port 3030 still busy; trying sudo kill -9."' \
-            '      echo "$BUSY_PIDS" | xargs -r sudo -n kill -9 || true' \
-            '      sleep 1' \
+            'for PORT in 3030 4000; do' \
+            '  BUSY_PIDS=$(lsof -Pi :$PORT -sTCP:LISTEN -t || true)' \
+            '  if [ -n "$BUSY_PIDS" ]; then' \
+            '    echo "Port $PORT is busy (PIDs: $BUSY_PIDS); attempting to terminate."' \
+            '    echo "$BUSY_PIDS" | xargs -r kill || true' \
+            '    sleep 1' \
+            '    if lsof -Pi :$PORT -sTCP:LISTEN -t >/dev/null 2>&1; then' \
             '      if command -v fuser >/dev/null 2>&1; then' \
-            '        sudo -n fuser -k 3030/tcp || true' \
+            '        echo "Port $PORT still busy; trying fuser -k $PORT/tcp."' \
+            '        fuser -k $PORT/tcp || true' \
             '        sleep 1' \
             '      fi' \
             '    fi' \
+            '    if lsof -Pi :$PORT -sTCP:LISTEN -t >/dev/null 2>&1; then' \
+            '      if command -v sudo >/dev/null 2>&1; then' \
+            '        echo "Port $PORT still busy; trying sudo kill -9."' \
+            '        echo "$BUSY_PIDS" | xargs -r sudo -n kill -9 || true' \
+            '        sleep 1' \
+            '        if command -v fuser >/dev/null 2>&1; then' \
+            '          sudo -n fuser -k $PORT/tcp || true' \
+            '          sleep 1' \
+            '        fi' \
+            '      fi' \
+            '    fi' \
+            '    if lsof -Pi :$PORT -sTCP:LISTEN -t >/dev/null 2>&1; then' \
+            '      echo "Port $PORT is still occupied after kill attempts." >&2' \
+            '      exit 1' \
+            '    fi' \
             '  fi' \
-            '  if lsof -Pi :3030 -sTCP:LISTEN -t >/dev/null 2>&1; then' \
-            '    echo "Port 3030 is still occupied after kill attempts." >&2' \
-            '    exit 1' \
-            '  fi' \
-            'fi' \
+            'done' \
             '"${COMPOSE_CMD[@]}" pull || true' \
             '"${COMPOSE_CMD[@]}" build --pull' \
             '"${COMPOSE_CMD[@]}" up -d' \
