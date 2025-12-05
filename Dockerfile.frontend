@@ -22,5 +22,5 @@ COPY ui/ /app/ui/
 EXPOSE 8501
 
 # Run the Streamlit application on default internal port (8501)
-CMD ["streamlit", "run", "ui/streamlit_app.py", "--server.port=8501", "--server.address=0.0.0.0", "--browser.serverAddress=localhost", "--browser.serverPort=4000", "--server.enableCORS=false", "--server.enableXsrfProtection=false"]
+CMD ["streamlit", "run", "ui/streamlit_app.py", "--server.port=8501", "--server.address=0.0.0.0", "--server.enableCORS=false", "--server.enableXsrfProtection=false"]
 

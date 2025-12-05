@@ -197,8 +197,24 @@ jobs:
             '  echo "Port $PORT is now free"' \
             'done' \
             'sleep 2' \
+            'echo "Final port verification before starting containers..."' \
+            'for PORT in 3031 4000; do' \
+            '  if lsof -Pi :$PORT -sTCP:LISTEN >/dev/null 2>&1; then' \
+            '    echo "WARNING: Port $PORT is in use right before docker up!" >&2' \
+            '    lsof -Pi :$PORT -sTCP:LISTEN' \
+            '    PIDS=$(lsof -Pi :$PORT -sTCP:LISTEN -t 2>/dev/null || true)' \
+            '    if [ -n "$PIDS" ]; then' \
+            '      echo "Force killing PIDs: $PIDS"' \
+            '      kill -9 $PIDS 2>/dev/null || true' \
+            '      sleep 2' \
+            '    fi' \
+            '  else' \
+            '    echo "Port $PORT is free"' \
+            '  fi' \
+            'done' \
             '"${COMPOSE_CMD[@]}" pull || true' \
             '"${COMPOSE_CMD[@]}" build --pull' \
+            'echo "Starting containers..."' \
             '"${COMPOSE_CMD[@]}" up -d' \
             'echo "Deployment completed successfully!"')
 
