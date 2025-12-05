@@ -168,49 +168,35 @@ jobs:
             '  echo "Neither docker-compose nor docker compose is available." >&2' \
             '  exit 1' \
             'fi' \
-            '"${COMPOSE_CMD[@]}" down' \
-            'echo "Stopping all running containers..."' \
-            'docker stop $(docker ps -q) 2>/dev/null || true' \
+            'echo "Cleaning up Docker resources..."' \
+            '"${COMPOSE_CMD[@]}" down --remove-orphans' \
+            'docker ps -a | grep -E "echomind|poc" | awk "{print \$1}" | xargs -r docker rm -f 2>/dev/null || true' \
+            'docker network prune -f 2>/dev/null || true' \
             'sleep 2' \
-            'for name in echomind-backend echomind-frontend; do' \
-            '  if docker ps -a --format "{{.Names}}" | grep -Fxq "$name"; then' \
-            '    echo "Removing stale container: $name"' \
-            '    docker rm -f "$name" || true' \
-            '  fi' \
-            'done' \
-            'echo "Cleaning up ports..."' \
+            'echo "Killing processes on required ports..."' \
             'for PORT in 3031 4000; do' \
-            '  BUSY_PIDS=$(lsof -Pi :$PORT -sTCP:LISTEN -t || true)' \
+            '  echo "Checking port $PORT..."' \
+            '  BUSY_PIDS=$(lsof -Pi :$PORT -sTCP:LISTEN -t 2>/dev/null || true)' \
             '  if [ -n "$BUSY_PIDS" ]; then' \
-            '    echo "Port $PORT is busy (PIDs: $BUSY_PIDS); attempting to terminate."' \
-            '    echo "$BUSY_PIDS" | xargs -r kill || true' \
-            '    sleep 1' \
-            '    if lsof -Pi :$PORT -sTCP:LISTEN -t >/dev/null 2>&1; then' \
-            '      if command -v fuser >/dev/null 2>&1; then' \
-            '        echo "Port $PORT still busy; trying fuser -k $PORT/tcp."' \
-            '        fuser -k $PORT/tcp || true' \
-            '        sleep 1' \
-            '      fi' \
-            '    fi' \
-            '    if lsof -Pi :$PORT -sTCP:LISTEN -t >/dev/null 2>&1; then' \
-            '      if command -v sudo >/dev/null 2>&1; then' \
-            '        echo "Port $PORT still busy; trying sudo kill -9."' \
-            '        echo "$BUSY_PIDS" | xargs -r sudo -n kill -9 || true' \
-            '        sleep 1' \
-            '        if command -v fuser >/dev/null 2>&1; then' \
-            '          sudo -n fuser -k $PORT/tcp || true' \
-            '          sleep 1' \
-            '        fi' \
-            '      fi' \
-            '    fi' \
-            '    if lsof -Pi :$PORT -sTCP:LISTEN -t >/dev/null 2>&1; then' \
-            '      echo "Port $PORT is still occupied after kill attempts." >&2' \
-            '      exit 1' \
-            '    fi' \
+            '    echo "Port $PORT is busy. PIDs: $BUSY_PIDS"' \
+            '    lsof -Pi :$PORT -sTCP:LISTEN || true' \
+            '    echo "Killing PIDs: $BUSY_PIDS"' \
+            '    kill -9 $BUSY_PIDS 2>/dev/null || true' \
+            '    sleep 2' \
             '  fi' \
+            '  if command -v fuser >/dev/null 2>&1; then' \
+            '    fuser -k $PORT/tcp 2>/dev/null || true' \
+            '    sleep 1' \
+            '  fi' \
+            '  REMAINING=$(lsof -Pi :$PORT -sTCP:LISTEN -t 2>/dev/null || true)' \
+            '  if [ -n "$REMAINING" ]; then' \
+            '    echo "ERROR: Port $PORT still occupied by PIDs: $REMAINING" >&2' \
+            '    lsof -Pi :$PORT -sTCP:LISTEN || true' \
+            '    exit 1' \
+            '  fi' \
+            '  echo "Port $PORT is now free"' \
             'done' \
-            'echo "Waiting for ports to be fully released..."' \
-            'sleep 3' \
+            'sleep 2' \
             '"${COMPOSE_CMD[@]}" pull || true' \
             '"${COMPOSE_CMD[@]}" build --pull' \
             '"${COMPOSE_CMD[@]}" up -d' \
